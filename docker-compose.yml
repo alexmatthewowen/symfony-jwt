@@ -3,8 +3,8 @@ version: '3.8'
 services:
   php:
     container_name: php
-    image: php:8.2-fpm
-    working_dir: /var/www/symfony_docker
+    build:
+      context: ./docker/php
     ports:
       - '9000:9000'
     volumes:

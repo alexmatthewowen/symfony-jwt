@@ -4,6 +4,11 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    database_host: database
+    database_port: 3306
+    database_name: dev_db
+    database_user: dev_db
+    database_password: dev_db
 
 services:
     # default configuration for services in *this* file
@@ -17,8 +22,31 @@ services:
         resource: '../src/'
         exclude:
             - '../src/DependencyInjection/'
-            - '../src/Entity/'
+            - '../src/Domain/Entity/'
             - '../src/Kernel.php'
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
+    App\Http\Controller\:
+        resource: '../src/Http/Controller/'
+        tags: ['controller.service_arguments']
+
+    Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory:
+        arguments:
+            $passwordHashers:
+                default:
+                    algorithm: auto
+
+    Symfony\Component\PasswordHasher\PasswordHasherInterface:
+        factory: ['@Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactory', 'getPasswordHasher']
+        arguments:
+            $user: 'default'
+
+    App\Http\ValueResolver\RequestPayloadValueResolver:
+        tags:
+            - controller.argument_value_resolver:
+                  name: request_payload
+
+    App\Http\EventListener\ParameterValidationExceptionListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception }
+
+
