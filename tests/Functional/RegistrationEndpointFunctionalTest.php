@@ -6,6 +6,7 @@ namespace Functional;
 
 use App\Domain\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Ramsey\Uuid\Uuid;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
@@ -159,6 +160,36 @@ final class RegistrationEndpointFunctionalTest extends WebTestCase
                 'code' => '422',
                 'message' => 'Parameter issues',
                 'errors' => $expectedErrors
+            ]),
+            $this->client->getResponse()->getContent()
+        );
+    }
+
+    public function testUnprocessableEntityOnExistingEmail(): void
+    {
+        $user = new User(
+            Uuid::uuid4(),
+            'alex@test.com',
+            'password'
+        );
+        /** @var EntityManagerInterface $em */
+        $em = $this->getContainer()->get(EntityManagerInterface::class);
+        $em->persist($user);
+        $em->flush();
+
+        $this->client->request(method: self::METHOD, uri: self::URI, content: \json_encode([
+            'email' => 'alex@test.com',
+            'password' => 'Supersecurepassword123!'
+        ]));
+
+        $this->assertResponseStatusCodeSame(422);
+        $this->assertJsonStringEqualsJsonString(
+            \json_encode([
+                'code' => '422',
+                'message' => 'Parameter issues',
+                'errors' => [
+                    'email' => 'Email is already in use.'
+                ]
             ]),
             $this->client->getResponse()->getContent()
         );

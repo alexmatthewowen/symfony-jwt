@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\RequestPayload;
 
+use App\Domain\Entity\User;
+use App\Validator\UniqueEntityProperty;
 use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
@@ -20,6 +22,7 @@ final readonly class RegisterPayload implements RequestPayloadInterface
         #[NotBlank]
         #[Email]
         #[Length(max: 120)]
+        #[UniqueEntityProperty(User::class, 'email', 'Email is already in use.')]
         private mixed $email,
 
         #[NotBlank]

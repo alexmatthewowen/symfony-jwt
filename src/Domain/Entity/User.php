@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Domain\Entity;
 
-use App\Repository\UserRepositoryInterface;
+use App\Repository\UserMariaDbRepository;
 use Doctrine\ORM\Mapping\Column;
 use Doctrine\ORM\Mapping\Entity;
 use Doctrine\ORM\Mapping\Id;
 use Ramsey\Uuid\UuidInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
-#[Entity(repositoryClass: UserRepositoryInterface::class)]
+#[Entity(repositoryClass: UserMariaDbRepository::class)]
 class User implements UserInterface
 {
     #[Id]
