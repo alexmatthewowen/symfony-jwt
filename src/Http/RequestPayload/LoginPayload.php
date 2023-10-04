@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Http\RequestPayload;
 
 use Symfony\Component\Validator\Constraints\Email;
-use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Type;
 
-final readonly class RegisterPayload implements RequestPayloadInterface
+final readonly class LoginPayload implements RequestPayloadInterface
 {
     public static function fromArray(array $payload): RequestPayloadInterface
     {
@@ -17,13 +16,12 @@ final readonly class RegisterPayload implements RequestPayloadInterface
     }
 
     public function __construct(
+
         #[NotBlank]
         #[Email]
-        #[Length(max: 120)]
         private mixed $email,
 
         #[NotBlank]
-        #[Length(min: 8, max: 120)]
         #[Type('string')]
         private mixed $password
     ) {

@@ -6,12 +6,14 @@ namespace Functional;
 
 use App\Domain\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Ramsey\Uuid\Uuid;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\PasswordHasher\PasswordHasherInterface;
 
-final class RegistrationEndpointFunctionalTest extends WebTestCase
+final class LoginEndpointFunctionalTest extends WebTestCase
 {
-    private const URI = '/register';
+    private const URI = '/login';
     private const METHOD = 'POST';
 
     private readonly KernelBrowser $client;
@@ -35,7 +37,7 @@ final class RegistrationEndpointFunctionalTest extends WebTestCase
         ;
     }
 
-    public static function invalidRequestPayloadProvider(): \Generator
+    public static function invalidPayloadProvider(): \Generator
     {
         yield 'with email missing' => [
             'payload' => [
@@ -53,16 +55,6 @@ final class RegistrationEndpointFunctionalTest extends WebTestCase
             ],
             'expectedErrors' => [
                 'email' => 'This value should not be blank.'
-            ]
-        ];
-
-        yield 'with email too long' => [
-            'payload' => [
-                'email' => 'a@'.\str_repeat('t', 250).'.com',
-                'password' => 'RandomPassword12?'
-            ],
-            'expectedErrors' => [
-                'email' => 'This value is too long. It should have 120 characters or less.'
             ]
         ];
 
@@ -105,26 +97,6 @@ final class RegistrationEndpointFunctionalTest extends WebTestCase
             ]
         ];
 
-        yield 'with password too short' => [
-            'payload' => [
-                'email' => 'alexowen123@test.com',
-                'password' => 'Randm1!'
-            ],
-            'expectedErrors' => [
-                'password' => 'This value is too short. It should have 8 characters or more.'
-            ]
-        ];
-
-        yield 'with password too long' => [
-            'payload' => [
-                'email' => 'alexowen123@test.com',
-                'password' => \str_repeat('p', 256)
-            ],
-            'expectedErrors' => [
-                'password' => 'This value is too long. It should have 120 characters or less.'
-            ]
-        ];
-
         yield 'with password null' => [
             'payload' => [
                 'email' => 'alexowen123@test.com',
@@ -147,9 +119,9 @@ final class RegistrationEndpointFunctionalTest extends WebTestCase
     }
 
     /**
-     * @dataProvider invalidRequestPayloadProvider
+     * @dataProvider invalidPayloadProvider
      */
-    public function testUnprocessableEntityResponseOnInvalidRequestPayload(array $payload, array $expectedErrors): void
+    public function testUnprocessableEntityResponseOnInvalidPayload(array $payload, array $expectedErrors): void
     {
         $this->client->request(method: self::METHOD, uri: self::URI, content: \json_encode($payload));
 
@@ -164,13 +136,44 @@ final class RegistrationEndpointFunctionalTest extends WebTestCase
         );
     }
 
-    public function testSuccessfulRequest(): void
+
+    public function testInvalidLoginCredentials(): void
     {
         $this->client->request(method: self::METHOD, uri: self::URI, content: \json_encode([
-            'email' => 'alexmatthewowen1994@gmail.com',
-            'password' => 'ThisPasswordSHouldProbablyBeMoreSecure12!'
+            'email' => 'alex.owen@testemail.com',
+            'password' => 'Spersecurepassword12!'
         ]));
-        $this->assertResponseStatusCodeSame(201);
+
+        $this->assertResponseStatusCodeSame(401);
+        $this->assertJsonStringEqualsJsonString(
+            \json_encode([
+                'code' => '401',
+                'message' => 'Invalid login credentials.'
+            ]),
+            $this->client->getResponse()->getContent()
+        );
+    }
+
+    public function testSuccessfulLogin(): void
+    {
+        /** @var EntityManagerInterface $em */
+        $em = $this->getContainer()->get(EntityManagerInterface::class);
+        /** @var PasswordHasherInterface $hasher */
+        $hasher = $this->getContainer()->get(PasswordHasherInterface::class);
+        $user = new User(
+            Uuid::uuid4(),
+            'alex.owen@testemail.com',
+            $hasher->hash('Spersecurepassword12!')
+        );
+        $em->persist($user);
+        $em->flush();
+
+        $this->client->request(method: self::METHOD, uri: self::URI, content: \json_encode([
+            'email' => 'alex.owen@testemail.com',
+            'password' => 'Spersecurepassword12!'
+        ]));
+
+        $this->assertResponseStatusCodeSame(200);
 
         $json = \json_decode($this->client->getResponse()->getContent(), true, JSON_THROW_ON_ERROR);
         $this->assertArrayHasKey('token', $json);
